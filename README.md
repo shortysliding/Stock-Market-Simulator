@@ -1,4 +1,4 @@
-# IDK if it works now.
+# IDK if it works now. Rewriting this.
 # Stock Market Simulator
 #### Video Demo:  <https://youtu.be/ZJvViv5t6cI>
 #### Description:
