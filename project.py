@@ -278,5 +278,6 @@ def difference(difference, balance):
     return balance
 
     
-if __name__ == "__main__":
+"""if __name__ == "__main__":
     main()
+"""
