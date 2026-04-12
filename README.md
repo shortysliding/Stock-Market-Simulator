@@ -1,6 +1,6 @@
 
 # Stock Market Simulator
-#### Video Demo:  <https://youtu.be/ZJvViv5t6cI>
+#### Video Demo:  <https://youtu.be/ZJvViv5t6cI> (outdated)
 #### Description:
 This is a simple command line which can simulate buying and selling stocks.
 It saves all of your data in holdings.csv and report.csv
