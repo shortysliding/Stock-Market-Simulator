@@ -4,7 +4,8 @@
 #### Description:
 This is a simple command line which can simulate buying and selling stocks.
 It saves all of your data in holdings.csv and report.csv
-# If it doesn't work, try updating yfinance pip install --upgrade yfinance --no-cache-dir
+# If it doesn't work, try updating yfinance 
+```pip install --upgrade yfinance --no-cache-dir```
 
 ## __Requirements__
 Required libraries can be downloaded by
