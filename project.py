@@ -64,9 +64,9 @@ def main():
                 if lastprice is None:
                     print(
                         f"""Failed to fetch stock price. Try with proper ticker such as 'NVDA'.
-                    If it still fails create and issue at <url>
+                    If it still fails create and issue at https://github.com/shortysliding/Stock-Market-Simulator/issues
                     """
-                    )  # will add url later
+                    )  
                     continue
                 buy_in_database(cur, name, lastprice)
                 print("=========================")
@@ -81,9 +81,9 @@ def main():
                 if lastprice is None:
                     print(
                         f"""Failed to fetch stock price. Try with proper ticker such as 'NVDA'.
-                    If it still fails create and issue at <url>
+                    If it still fails create and issue at https://github.com/shortysliding/Stock-Market-Simulator/issues
                     """
-                    )  # will add url later
+                    )  
                     continue
                 sell_in_database(cur, name, lastprice)
                 print("=========================")
