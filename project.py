@@ -1,283 +1,187 @@
 import yfinance as yf
-import csv
-import datetime
+import sqlite3
 import sys
-import os 
-
-
-class Portfolio:
-    def __init__(self):
-        self._holdings = []
-        self._valuation_before = 0  
-
-
-    def check(self):
-        # checks the holdings.csv file and returns the previous holdings
-        try:
-            with open("holdings.csv", "r") as file:
-                reader = list(csv.DictReader(file))
-                self._holdings = reader
-                
-                return self._holdings
-        except FileNotFoundError:
-            return False
-        
-
-    def buy_stock(self, num, name, balance):        
-        """
-        Buys a stock and adds it to the self._holdings.
-        """
-        info = call_api(name)
-        info = float(info) * float(num)
-        self._stocks = {"name": name, "valuation": info}
-        self._holdings.append(self._stocks)
-        balance -= float(info)
-        if balance < 0:
-            sys.exit("\nYou have run out of money")
-
-        return self._holdings, balance
-
-    def sell_stock(self, num, name, stocks, balance):
-        """
-        Sells a stock and checks if we made profits or loss.
-        """
-        #checks prevous valuation and current valuation
-        info = call_api(name)
-        for i in stocks:
-            if i["name"] == name:
-                self._valuation_before = i["valuation"]
-                i["valuation"] = float(info) * float(num)
-
-        #calculates the difference between the previous valuation and current valuation
-        # and updates the balance accordingly
-        self._difference = float(self._valuation_before) - float(info) * float(num)
-        self._diff = 0
-        balance = difference(difference=self._difference, balance=balance)    
-        update(balance)       
-        print(f"{name} was sold at {info}")
+import os
 
 
 def main():
-    
-    balance = 0
-    balance = balance_check()
-    portfolio = Portfolio()
-    portfolio.check()
-    update(balance)
+    connect = sqlite3.connect("database.db")
+
+    cur = connect.cursor()
+    cur.execute(
+        """
+    CREATE TABLE IF NOT EXISTS stocks (
+    name TEXT,
+    lastprice REAL
+    )
+    """
+    )
+    connect.commit()
+
+    balance = balance_check(cur)
 
     print(
-        f"""
+        f"""Default balance is 100000$. Will Reset Automatically after you run out of money
         What do you want to do?
         "Report": Check your report
         "Buy": Buy a stock
         "Sell": Sell a stock
-        "Deposit": Deposit money to your account
         "Q": Quit the program
+        "Reset": Reset everything
         """
     )
-
-    num = 0
+    # so that num is defined
+    num = ""
     while num != "Q":
         try:
-            num = input("Enter a task: ").capitalize()
-            
+            num = input("Enter a task: ").upper()
+
         except ValueError:
             print("Please enter a valid task")
         match num:
-            case "Report":
-                balance = balance_check()
-                update(balance)
-                
-            case "Buy":
-                balance = balance_check()
-                balance = buy(balance)
-                update(balance)
-                
-            case "Sell":
-                sell()
-            case "Deposit":
-                amount = float(input("How much to deposit? "))
-                deposit(n = amount, balance=balance)
-                print(f"Deposited {amount} to your account")
+            case "REPORT":
+                cur.execute("SELECT * FROM stocks")
+                items = cur.fetchall()
+                for item in items:
+                    print(item)
+                print(f"Your Balance is: {balance}$")
+            case "RESET":
+                reset(cur)
+                connect.commit()
 
+            case "BUY":
 
-    update(balance_check())
+                if balance > 0:
+                    pass
+                else:
+
+                    reset(cur)
+                # combines everything
+                print("===== Buy a stock =====")
+                name = input("Which stock to buy? ")
+                n = float(input("How many shares you want to buy? "))
+                lastprice = calc_price(n, name)
+                if lastprice is None:
+                    print(
+                        f"""Failed to fetch stock price. Try with proper ticker such as 'NVDA'.
+                    If it still fails create and issue at <url>
+                    """
+                    )  # will add url later
+                    continue
+                buy_in_database(cur, name, lastprice)
+                print("=========================")
+                balance = balance_check(cur)
+                connect.commit()
+
+            case "SELL":
+                print("===== Sell a stock =====")
+                name = input("Which stock to sell? ")
+                n = float(input("How many shares you want to sell? "))
+                lastprice = calc_price(n, name)
+                if lastprice is None:
+                    print(
+                        f"""Failed to fetch stock price. Try with proper ticker such as 'NVDA'.
+                    If it still fails create and issue at <url>
+                    """
+                    )  # will add url later
+                    continue
+                sell_in_database(cur, name, lastprice)
+                print("=========================")
+                balance = balance_check(cur)
+                connect.commit()
+
     print("Goodbye!")
 
-def deposit(n, balance):
-    print("===== Deposit money =====")
-    balance += float(n)
-    update(balance)
-    print("=========================")
-    return balance
-    
 
-def balance_check():
+def balance_check(cur):
     # checks for the last balance
-    balance = 0
-    try:
-        with open("report.csv", "r") as file:
-            reader = list(csv.reader(file))
-            try:
-                balance = float(reader[-1][2])
-            except IndexError:
-                print("\nReminder: ")
-                print("You have not deposited any money yet")
-            return balance
-    
-    except FileNotFoundError:
-        print("You have not deposited any money yet")
-        return balance
-        
+
+    cur.execute("SELECT lastprice FROM stocks")
+    items = cur.fetchall()
+    # item has only 1 thing >> lastprice
+    spend = sum(item[0] for item in items)
+    return 100000 - spend
 
 
-    
+def calc_price(numof_shares, name):
+
+    lastprice = call_api(name)
+    if lastprice is None:
+        return None
+    return float(lastprice) * float(numof_shares)
+
 
 def call_api(name):
     try:
+
         stock = yf.Ticker(name)
 
-        info = float(stock.fast_info["lastPrice"])
-        return info
+        # Get latest market data
+        data = stock.history(period="1d")
 
-    except KeyError:
-        print("Enter a valid stock name")
-    except:
-        print("Unable to fetch data from the API")
+        # Get last price
+        last_price = data["Close"].iloc[-1]
+        if last_price is None:
+            return None
 
+        return last_price
 
-def buy(balance):
-    #combines everything 
-    # buys a stock and saves into a csv >>save_stock_csv(stock)
-    print("===== Buy a stock =====")
-    name = input("Which stock to buy? ")
-    n = float(input("How many shares you want to buy? "))
-
-    portfolio = Portfolio()
-
-    stock, balance = portfolio.buy_stock(name=name, num=n, balance=balance)
-    save_stock_csv(stock)
-    print("=========================")
-    return balance
-
-    
+    except Exception:
+        print("Unable to fetch data from API")
+        return None
 
 
-def sell():
-    #combines everything
-    # sells a stock and removes it from the csv >>sell_stock_csv(stock)
-    print("===== Sell a stock =====")
-    name = input("Which stock to sell? ")
-    portfolio = Portfolio()
-    stocks = portfolio.check()
-    n = float(input("how many shares to sell? "))
-    portfolio.sell_stock(num=n, name=name, stocks=stocks, balance=balance_check())
-    sell_stock_csv(name=name)
-    print("=========================")
-    return True
-    
-    
-def save_stock_csv(stocks):
-    # saves the stocks into a csv file
-    with open("holdings.csv", "r") as file:
-        reader = list(csv.reader(file))
+def buy_in_database(cur, name, lastprice):
 
-        # checks if the file is empty or not
-    with open("holdings.csv", "a+", newline="") as csvfile:
+    a = cur.execute("SELECT EXISTS(SELECT 1 FROM stocks WHERE name = ?)", (name,))
 
-        writer = csv.DictWriter(csvfile, fieldnames=["name", "valuation"])
-        if reader == []:
-            writer.writeheader()
-        # for lines in writer:
-        for i in stocks:
-            #if i["valuation"] != "valuation":
-            writer.writerow(i)
-                
-            
+    result = int(a.fetchone()[0])
 
-
-def sell_stock_csv(name):
-    p = Portfolio()
-    stocks = p.check()
-    for i in stocks:
-        if i["name"] == name:
-            previous_valuation = i["valuation"]
-            break
-    # writes every line except the line that contains the stock to be sold
-    with (
-        open("holdings.csv", "r", newline="") as file):
-        # reads the file and stores it in a list
-        reader = list(csv.reader(file))
-    
-    with open("holdings.csv", "w", newline="") as outfile:
-        # opens the file in write mode and writes every line except the line that contains the stock to be sold
-        writer = csv.writer(outfile)
-        for row in reader:
-            if name ==row[0]:  
-                row[1] = float(row[1]) - float(previous_valuation)
-                try:
-                    if row[1] >= 0:
-                        writer.writerow(row[0], row[1])
-                except TypeError:
-                    print("You can only sell the number of stocks you bought")
-            else:
-                # writes the row to the file
-                writer.writerow(row)
-
-
-def update(balance):   
-    # calculates the current balance from the holdings.csv file
-    print("===== Report =====")
-    own = 0
-    try:
-        with open("holdings.csv", "r") as file:
-            reader = list(csv.reader(file))
-            for row in reader:
-                try:
-                    if row[1] != "valuation":
-                        #calculates how much you own in total
-                        own += float(row[1])
-                except IndexError:
-                    print("You have not bought any stocks yet")
-    except FileNotFoundError:
-        _= open("holdings.csv", "w")
-        _.close()
-
-    print(f"\nYou own: {own}$")
-    print(f"Your Balance is: {balance}$")
-    now = datetime.datetime.now()     
-    row = []
-    row.extend([now, own, balance])
-   
-    # and checks if the report.csv file exists or not "
-    
-    if not os.path.exists("report.csv"):
-        open("report.csv", 'w').close()  
-        
-    ## writes the current balance and date, time to the report.csv file
-    with open("report.csv", "r+", newline="") as report:
-        reader = list(csv.reader(report))
-        report = csv.writer(report)
-        #checks if the report.csv file is empty or not
-        if reader == []:
-            report.writerow(["Date", "Total Owned", "Balance"])
-            print("You have not bought any stocks yet\n")
-        report.writerow(row)
-    print("\nreport.csv saved\n")
-    print("============================================")
-    return True
-
-
-def difference(difference, balance):  
-    if difference> 0:
-        balance += difference
-    elif difference < 0:
-        balance -= abs(difference)
+    if result == 0:
+        cur.execute(
+            "INSERT INTO stocks (name, lastprice) VALUES (?, ?)", (name, lastprice)
+        )
     else:
-        balance += 0
-    return balance
+        cur.execute(
+            "UPDATE stocks SET lastprice = lastprice + ? WHERE name = ?",
+            (lastprice, name),
+        )
 
-    
-"""if __name__ == "__main__":
+
+def sell_in_database(cur, name, lastprice):
+
+    cur.execute("SELECT lastprice FROM stocks WHERE name = ?", (name,))
+
+    item = cur.fetchone()
+    if item is None:
+        print("You don't own this stock")
+        return
+
+    current = item[0]
+
+    if current < lastprice:
+        return "You can't sell more than you have"
+
+    new_value = current - lastprice
+
+    if new_value == 0:
+        cur.execute("DELETE FROM stocks WHERE name = ?", (name,))
+    else:
+        cur.execute(
+            "UPDATE stocks SET lastprice = ? WHERE name = ?",
+            (new_value, name),
+        )
+
+
+def reset(cur):
+    cur.execute("DROP TABLE stocks")
+
+    sys.exit(
+        """You are bankrupt
+                   Resetting
+              Restart the program"""
+    )
+
+
+if __name__ == "__main__":
     main()
-"""
