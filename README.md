@@ -1,9 +1,10 @@
-# IDK if it works now. Rewriting this.
+
 # Stock Market Simulator
 #### Video Demo:  <https://youtu.be/ZJvViv5t6cI>
 #### Description:
 This is a simple command line which can simulate buying and selling stocks.
 It saves all of your data in holdings.csv and report.csv
+# If it doesn't work, try updating yfinance pip install --upgrade yfinance --no-cache-dir
 
 ## __Requirements__
 Required libraries can be downloaded by
@@ -21,7 +22,7 @@ What do you want to do? (Write the desired quoted task.)
     "Report": Check your report
     "Buy": Buy a stock
     "Sell": Sell a stock
-    "Deposit": Deposit money to your account
+    "Reset": Resets everything
     "Q": Quit the program
 ```
 
