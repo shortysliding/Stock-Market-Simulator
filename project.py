@@ -4,6 +4,7 @@ import sys
 import os
 
 
+
 def main():
     connect = sqlite3.connect("database.db")
 
@@ -68,10 +69,13 @@ def main():
                     """
                     )  
                     continue
-                buy_in_database(cur, name, lastprice)
-                print("=========================")
-                balance = balance_check(cur)
-                connect.commit()
+                elif (balance-lastprice)>0:
+                    buy_in_database(cur, name, lastprice)
+                    print("=========================")
+                    balance = balance_check(cur)
+                    connect.commit()
+                else:
+                    print(f"You don't have enough balance. Shortage {(balance - lastprice)*-1}$")
 
             case "SELL":
                 print("===== Sell a stock =====")
@@ -176,10 +180,10 @@ def sell_in_database(cur, name, lastprice):
 def reset(cur):
     cur.execute("DROP TABLE stocks")
 
-    sys.exit(
+    print(
         """You are bankrupt
                    Resetting
-              Restart the program"""
+              Reset Complete!"""
     )
 
 
