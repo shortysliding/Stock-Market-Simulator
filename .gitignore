@@ -1,0 +1,4 @@
+# Pytest artifacts
+.pytest_cache/
+_pycache_
+database.db
