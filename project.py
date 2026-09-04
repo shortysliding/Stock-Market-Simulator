@@ -4,28 +4,22 @@ import sys
 import os
 
 
-
 def main():
     connect = sqlite3.connect("database.db")
 
     cur = connect.cursor()
-    cur.execute(
-        """
+    cur.execute("""
     CREATE TABLE IF NOT EXISTS stocks (
     name TEXT,
     lastprice REAL,
     number REAL
     )
-    """
-    )
-    cur.execute(
-        """
+    """)
+    cur.execute("""
         CREATE TABLE IF NOT EXISTS account (
             balance REAL
             )
-        """
-        
-    )
+        """)
     connect.commit()
 
     balance = balance_check(cur)
@@ -42,7 +36,7 @@ def main():
     )
     # so that num is defined
     num = ""
-    while(True):
+    while True:
         try:
             num = input("Enter a task: ").upper()
 
@@ -80,16 +74,18 @@ def main():
                         f"""Failed to fetch stock price. Try with proper ticker such as 'NVDA'.
                     If it still fails create and issue at https://github.com/shortysliding/Stock-Market-Simulator/issues
                     """
-                    )  
+                    )
                     continue
-                elif (balance-lastprice)>0:
+                elif (balance - lastprice) > 0:
                     buy_in_database(cur, name, lastprice, n)
                     print("=========================")
                     balance = balance_check(cur)
                     connect.commit()
                     print("Complete!")
                 else:
-                    print(f"You don't have enough balance. Shortage {(balance - lastprice)*-1}$")
+                    print(
+                        f"You don't have enough balance. Shortage {(balance - lastprice)*-1}$"
+                    )
                     print("=========================")
 
             case "SELL":
@@ -97,68 +93,59 @@ def main():
                 name = input("Which stock to sell? ")
                 n = float(input("How many shares you want to sell? "))
                 lastprice = calc_price(n, name)
-                
+
                 if lastprice is None:
                     print(
                         f"""Failed to fetch stock price. Try with proper ticker such as 'NVDA'.
                     If it still fails create and issue at https://github.com/shortysliding/Stock-Market-Simulator/issues
                     """
-                    )  
+                    )
                     continue
-                lastprice_main = float(lastprice/n)
+                lastprice_main = float(lastprice / n)
                 print(profit(cur, lastprice_main, name))
                 sell_in_database(cur, name, lastprice, n)
                 print("=========================")
                 balance = balance_check(cur)
                 connect.commit()
 
-
             case "Q":
                 balance_check(cur)
                 connect.commit()
                 break
-                
 
     print("Goodbye!")
+
 
 def profit(cur, lastprice, name):
     cur.execute("SELECT lastprice FROM stocks WHERE name = ?", (name,))
     lastprice1 = cur.fetchone()
     cur.execute("SELECT number FROM stocks WHERE name = ?", (name,))
     number1 = cur.fetchone()
-    real_lastprice = int(lastprice1[0])/int(number1[0])
-    
-    
-    if((real_lastprice)<lastprice):
-        return f"You may lose {lastprice-real_lastprice}$ per stock"
-    elif(real_lastprice>=lastprice):
-        return f"You may gain {real_lastprice-lastprice}$ per stock"
+    real_lastprice = int(lastprice1[0]) / int(number1[0])
 
+    if (real_lastprice) < lastprice:
+        return f"You may lose {lastprice-real_lastprice}$ per stock"
+    elif real_lastprice >= lastprice:
+        return f"You may gain {real_lastprice-lastprice}$ per stock"
 
 
 def balance_check(cur):
     # checks for the last balance
-    
+
     cur.execute("SELECT balance FROM account")
     balance = cur.fetchone()
-    
+
     if balance is None:
         cur.execute("SELECT lastprice FROM stocks")
         items = cur.fetchall()
         # item has only 1 thing >> lastprice
         spend = sum(item[0] for item in items)
         balance = 100000 - spend
-        cur.execute(
-            "UPDATE account SET balance = ?",
-            (balance,)
-        )
+        cur.execute("UPDATE account SET balance = ?", (balance,))
         return 100000 - spend
     else:
 
         return float(balance[0])
-    
-
-
 
 
 def calc_price(numof_shares, name):
@@ -166,7 +153,7 @@ def calc_price(numof_shares, name):
     lastprice = call_api(name)
     if lastprice is None:
         return None
-    
+
     return float(lastprice) * float(numof_shares)
 
 
@@ -182,7 +169,7 @@ def call_api(name):
         last_price = data["Close"].iloc[-1]
         if last_price is None:
             return None
-        
+
         return last_price
 
     except Exception:
@@ -198,19 +185,18 @@ def buy_in_database(cur, name, lastprice, n):
 
     if result == 0:
         cur.execute(
-            "INSERT INTO stocks (name, lastprice, number) VALUES (?, ?, ?)", (name, lastprice, n)
+            "INSERT INTO stocks (name, lastprice, number) VALUES (?, ?, ?)",
+            (name, lastprice, n),
         )
     else:
         cur.execute(
             "UPDATE stocks SET lastprice = lastprice + ? WHERE name = ?",
             (lastprice, name),
-
         )
         cur.execute(
             "UPDATE stocks SET number = number + ? WHERE name = ?",
             (n, name),
         )
-    
 
 
 def sell_in_database(cur, name, lastprice, n):
@@ -228,11 +214,9 @@ def sell_in_database(cur, name, lastprice, n):
     if int(n2[0]) < n:
         print("You can't sell more than you have")
         return
-    
-  
 
     new_value = current - lastprice
-    new_n = n2[0] - n;
+    new_n = n2[0] - n
     if new_n == 0:
         cur.execute("DELETE FROM stocks WHERE name = ?", (name,))
     else:
@@ -252,22 +236,18 @@ def reset(cur):
     cur.execute("DROP TABLE stocks")
     connect = sqlite3.connect("database.db")
     cur = connect.cursor()
-    cur.execute(
-        """
+    cur.execute("""
     CREATE TABLE IF NOT EXISTS stocks (
     name TEXT,
     lastprice REAL,
     number REAL
     )
-    """
-    )
+    """)
     connect.commit()
 
-    print(
-        """You are bankrupt
+    print("""You are bankrupt
                    Resetting
-              Reset Complete!"""
-    )
+              Reset Complete!""")
 
 
 if __name__ == "__main__":
