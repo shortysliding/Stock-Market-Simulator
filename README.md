@@ -13,7 +13,7 @@ Required libraries can be downloaded by
 
 
 ## __Usage__
-For the first time it will show the user some tasks to choose from. User can do as many tasks as possible before running out of money. However, if money is not deposited already user will not be able to use the program. There is no limit on depositing money.\
+For the first time it will show the user some tasks to choose from. User can do as many tasks as possible before running out of money. 
 
 **Note: "Q" is to be inputted if user wants to quit(). Pressing Control-C will result the same.**
 
